@@ -42,6 +42,33 @@ export const AiChatbot: React.FC<Props> = ({ isOpen, onClose, onOpen, initialMes
 
   const chips = ['What services do you offer?', 'How much does a website cost?', 'I need a quotation', 'Book a consultation'];
 
+  const localReply = (q: string) => {
+    const lower = q.toLowerCase();
+    const serviceLines = services.length
+      ? services.map((s) => `• ${s.name} — ${priceLabel(s)}`).join('\n')
+      : '• Website development, redesign, e-commerce, landing pages, SEO and social media management';
+    const matchedService = services.find((s) => lower.includes(s.name.toLowerCase()));
+    if (matchedService) {
+      return `${matchedService.name} (${priceLabel(matchedService)}${matchedService.deliveryTime ? `, ${matchedService.deliveryTime}` : ''}): ${matchedService.shortDesc}\n\nMessage us on WhatsApp (${wa}) or use the contact form to get started.`;
+    }
+    if (/(price|cost|how much|rate|package|quote|quotation|service|offer)/.test(lower)) {
+      return `Here are our services and pricing (KSh):\n${serviceLines}\n\nFor an exact quotation, tell us about your project on WhatsApp (${wa}) or use the contact form on this page.`;
+    }
+    if (/(phone|call|contact|whatsapp|reach|number|email)/.test(lower)) {
+      return `You can reach ${settings.companyName} on WhatsApp or phone at ${wa}, or by email at ${settings.email}.`;
+    }
+    if (/(work|portfolio|project|example)/.test(lower)) {
+      const done = portfolio.filter((p) => !p.id.startsWith('placeholder'));
+      return done.length
+        ? `Some of our projects: ${done.map((p) => p.title).join(', ')}. You can view them in our Projects section.`
+        : `Our Selected Projects section showcases our work. For tailored examples, message us on WhatsApp (${wa}).`;
+    }
+    if (/(consult|book|meeting|appointment)/.test(lower)) {
+      return `We'd be glad to arrange a consultation. Message us on WhatsApp (${wa}) or send your details through the contact form and we'll get back to you.`;
+    }
+    return `Hello! I'm ${aiName}, the ${settings.companyName} virtual assistant. We offer:\n${serviceLines}\n\nAsk about pricing, projects, or message us on WhatsApp (${wa}).`;
+  };
+
   const send = async (text?: string) => {
     const content = (text ?? input).trim();
     if (!content || busy) return;
@@ -98,15 +125,17 @@ export const AiChatbot: React.FC<Props> = ({ isOpen, onClose, onOpen, initialMes
           }
         }
         if (!addedBubble) throw new Error('empty');
-      } else {
+      } else if (contentType.includes('application/json')) {
         const data = await res.json();
         if (!data.reply) throw new Error('empty');
         appendDelta(String(data.reply));
+      } else {
+        throw new Error('unsupported-response');
       }
     } catch {
       if (!addedBubble) {
         setFailed(true);
-        setMessages((p) => [...p, { id: `e-${Date.now()}`, role: 'assistant', timestamp: now(), content: "Sorry, I'm having trouble connecting right now. You can reach our team directly on WhatsApp and we'll help you straight away." }]);
+        setMessages((p) => [...p, { id: `e-${Date.now()}`, role: 'assistant', timestamp: now(), content: localReply(content) }]);
       }
     } finally { setBusy(false); }
   };
