@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Bot, MessageCircle, Send, Sparkles, Trash2, User, X } from 'lucide-react';
 import { useSite } from '../context/SiteContext';
 import { ChatMessage } from '../types';
@@ -6,18 +6,51 @@ import { priceLabel, waLink } from '../lib/format';
 
 interface Props { isOpen: boolean; onClose: () => void; onOpen: () => void; initialMessage?: string }
 const now = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+const VISITOR_KEY = 'emg_visitor';
+const NON_NAMES = new Set(['good', 'fine', 'great', 'okay', 'ok', 'well', 'doing', 'looking', 'interested', 'asking', 'building', 'trying', 'here', 'new', 'ready', 'sure', 'not', 'just', 'from', 'a', 'an', 'the', 'happy', 'glad', 'sorry', 'back', 'planning', 'starting', 'running', 'searching', 'wondering', 'curious', 'having']);
+
+const getTimeOfDay = () => {
+  const h = new Date().getHours();
+  return h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
+};
+
+const readVisitor = (): { name: string; service: string } => {
+  try {
+    const raw = localStorage.getItem(VISITOR_KEY);
+    if (!raw) return { name: '', service: '' };
+    const parsed = JSON.parse(raw) as { name?: string; service?: string };
+    return { name: (parsed.name || '').slice(0, 40), service: (parsed.service || '').slice(0, 60) };
+  } catch {
+    return { name: '', service: '' };
+  }
+};
+
+const detectVisitorName = (text: string): string => {
+  const m = text.match(/\b(?:my name is|call me|i['’]?m|i am)\s+([A-Za-z][A-Za-z'-]{1,20})\b/i);
+  if (!m) return '';
+  const word = m[1];
+  if (NON_NAMES.has(word.toLowerCase())) return '';
+  return word.charAt(0).toUpperCase() + word.slice(1);
+};
 
 export const AiChatbot: React.FC<Props> = ({ isOpen, onClose, onOpen, initialMessage }) => {
   const { settings, services, portfolio } = useSite();
   const wa = settings.whatsapp || settings.phone;
   const aiName = settings.aiName || 'Evans';
   const aiLogo = settings.aiLogo || '/assets/aistudio/EMG_AI_Neon_Tech_Logo_34e96ab4.png';
+  const [visitor, setVisitor] = useState(readVisitor);
 
-  const welcome = (): ChatMessage => ({
+  const buildWelcomeText = (name: string) => {
+    const tod = getTimeOfDay();
+    const hi = name ? `Good ${tod}, ${name}!` : `Good ${tod}!`;
+    return `${hi} I'm ${aiName}, the ${settings.companyName} virtual assistant. Ask me anything—from everyday questions to tailored website quotes and services.`;
+  };
+
+  const welcome = (name = visitor.name): ChatMessage => ({
     id: 'welcome', role: 'assistant', timestamp: now(),
-    content: `Hello! I'm ${aiName}, the ${settings.companyName} virtual assistant. I can help you with our services, pricing, quotations or booking a consultation. What would you like to know?`,
+    content: buildWelcomeText(name),
   });
-  const [messages, setMessages] = useState<ChatMessage[]>([welcome()]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [welcome(readVisitor().name)]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -25,14 +58,17 @@ export const AiChatbot: React.FC<Props> = ({ isOpen, onClose, onOpen, initialMes
   const sentInitial = useRef<string | undefined>(undefined);
 
   useEffect(() => {
+    const syncVisitor = () => setVisitor(readVisitor());
+    window.addEventListener('emg-visitor-updated', syncVisitor);
+    return () => window.removeEventListener('emg-visitor-updated', syncVisitor);
+  }, []);
+
+  useEffect(() => {
     setMessages((prev) =>
-      prev.map((m) =>
-        m.id === 'welcome'
-          ? { ...m, content: `Hello! I'm ${aiName}, the ${settings.companyName} virtual assistant. I can help you with our services, pricing, quotations or booking a consultation. What would you like to know?` }
-          : m
-      )
+      prev.map((m) => (m.id === 'welcome' ? { ...m, content: buildWelcomeText(visitor.name) } : m))
     );
-  }, [aiName, settings.companyName]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aiName, settings.companyName, visitor.name]);
 
   useEffect(() => { if (isOpen) endRef.current?.scrollIntoView({ behavior: busy ? 'auto' : 'smooth' }); }, [messages, busy, isOpen]);
   useEffect(() => {
@@ -40,38 +76,80 @@ export const AiChatbot: React.FC<Props> = ({ isOpen, onClose, onOpen, initialMes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialMessage, isOpen]);
 
-  const chips = ['What services do you offer?', 'How much does a website cost?', 'I need a quotation', 'Book a consultation'];
+  const compactServices = useMemo(
+    () => services.slice(0, 14).map((s) => ({ name: s.name, price: priceLabel(s), delivery: s.deliveryTime, description: s.shortDesc })),
+    [services]
+  );
+  const compactPortfolio = useMemo(
+    () => portfolio.filter((p) => !p.id.startsWith('placeholder')).slice(0, 10).map((p) => ({ title: p.title, category: p.category })),
+    [portfolio]
+  );
 
-  const localReply = (q: string) => {
-    const lower = q.toLowerCase();
+  const chips = ['What services do you offer?', 'How much does a website cost?', 'Why is a website important?', 'Book a consultation'];
+
+  const localReply = (q: string, activeName = visitor.name) => {
+    const lower = q.toLowerCase().trim();
+    const tod = getTimeOfDay();
+    const hiName = activeName ? `, ${activeName}` : '';
     const serviceLines = services.length
       ? services.map((s) => `• ${s.name} — ${priceLabel(s)}`).join('\n')
       : '• Website development, redesign, e-commerce, landing pages, SEO and social media management';
+    if (/(how are you|how r u|how's it going|how are things|how do you do|how u doing)/.test(lower)) {
+      return `I'm doing great${hiName}, thank you for asking! Hope you're having a wonderful ${tod}. How can I help you today?`;
+    }
+    if (/^(hi|hello|hey|good morning|good afternoon|good evening|habari|sasa|mambo|greetings)[!.\s?]*$/i.test(lower)) {
+      return `Good ${tod}${hiName}! Great to chat with you. I'm ${aiName}, the ${settings.companyName} virtual assistant—ask me anything, from everyday questions to personalized project quotes!`;
+    }
+    if (/(thank you|thanks|appreciate|shukran|asante)/.test(lower)) {
+      return `You're very welcome${hiName}! Anytime you need help, just ask here or reach us on WhatsApp (${wa}).`;
+    }
+    if (/(who are you|what is your name|what's your name|your name)/.test(lower)) {
+      return `I'm ${aiName}, the ${settings.companyName} virtual assistant. I can answer everyday questions, explain website concepts, or tailor a recommendation for you${hiName}.`;
+    }
+    if (/(what is a website|define website|meaning of.*website|what's a website)/.test(lower)) {
+      return `A website is your 24/7 online home under a unique address (like yourbusiness.com)—a collection of pages where customers can learn about you, explore services or products, and contact or buy from you anytime.`;
+    }
+    if (/(importance|benefit|why.*(need|have)|advantage|value).*(website|site)|website.*(important|useful|matter|benefit)/.test(lower)) {
+      return `A website gives you 24/7 visibility, instant credibility, and full control—unlike social media algorithms. It helps people find you on Google, builds trust with real projects and reviews, and turns visitors into WhatsApp or email leads. Want me to recommend the best option for you${hiName}?`;
+    }
+    if (/(what is.*domain|domain name|web hosting|what is hosting)/.test(lower)) {
+      return `A domain name is your website's address (like emgwebsolutions.com), while hosting is the secure server space where your site lives online 24/7.`;
+    }
+    if (/(what is.*seo|search engine opt)/.test(lower)) {
+      return `SEO (Search Engine Optimization) helps your website rank higher on Google when people search for what you offer—bringing steady organic customers without paying per click.`;
+    }
     const matchedService = services.find((s) => lower.includes(s.name.toLowerCase()));
     if (matchedService) {
-      return `${matchedService.name} (${priceLabel(matchedService)}${matchedService.deliveryTime ? `, ${matchedService.deliveryTime}` : ''}): ${matchedService.shortDesc}\n\nMessage us on WhatsApp (${wa}) or use the contact form to get started.`;
+      return `${matchedService.name} (${priceLabel(matchedService)}${matchedService.deliveryTime ? `, ${matchedService.deliveryTime}` : ''}): ${matchedService.shortDesc}\n\nMessage us on WhatsApp (${wa}) or use the contact form to get started${hiName}.`;
     }
     if (/(price|cost|how much|rate|package|quote|quotation|service|offer)/.test(lower)) {
-      return `Here are our services and pricing (KSh):\n${serviceLines}\n\nFor an exact quotation, tell us about your project on WhatsApp (${wa}) or use the contact form on this page.`;
+      return `Here are our services and pricing (KSh)${hiName}:\n${serviceLines}\n\nTell me what kind of project you have in mind or message us on WhatsApp (${wa}) for an exact quote.`;
     }
     if (/(phone|call|contact|whatsapp|reach|number|email)/.test(lower)) {
       return `You can reach ${settings.companyName} on WhatsApp or phone at ${wa}, or by email at ${settings.email}.`;
     }
     if (/(work|portfolio|project|example)/.test(lower)) {
-      const done = portfolio.filter((p) => !p.id.startsWith('placeholder'));
-      return done.length
-        ? `Some of our projects: ${done.map((p) => p.title).join(', ')}. You can view them in our Projects section.`
-        : `Our Selected Projects section showcases our work. For tailored examples, message us on WhatsApp (${wa}).`;
+      return compactPortfolio.length
+        ? `Some of our projects: ${compactPortfolio.map((p) => p.title).join(', ')}. You can view them all in our Projects section.`
+        : `Our Projects section showcases our work. For examples tailored to your industry${hiName}, message us on WhatsApp (${wa}).`;
     }
     if (/(consult|book|meeting|appointment)/.test(lower)) {
-      return `We'd be glad to arrange a consultation. Message us on WhatsApp (${wa}) or send your details through the contact form and we'll get back to you.`;
+      return `We'd love to book a quick consultation${hiName}. Message us on WhatsApp (${wa}) or use the contact form and our team will get right back to you.`;
     }
-    return `Hello! I'm ${aiName}, the ${settings.companyName} virtual assistant. We offer:\n${serviceLines}\n\nAsk about pricing, projects, or message us on WhatsApp (${wa}).`;
+    return `Good ${tod}${hiName}! I'm ${aiName}, the ${settings.companyName} virtual assistant. Ask me anything—from everyday questions to tailored website options:\n${serviceLines}`;
   };
 
   const send = async (text?: string) => {
     const content = (text ?? input).trim();
     if (!content || busy) return;
+    const detectedName = detectVisitorName(content);
+    const activeVisitorName = detectedName || visitor.name;
+    if (detectedName && detectedName !== visitor.name) {
+      const next = { ...visitor, name: detectedName };
+      setVisitor(next);
+      try { localStorage.setItem(VISITOR_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+    }
+
     const userMsg: ChatMessage = { id: `u-${Date.now()}`, role: 'user', content: content.slice(0, 1000), timestamp: now() };
     const history = [...messages, userMsg];
     setMessages(history); setInput(''); setBusy(true); setFailed(false);
@@ -93,12 +171,16 @@ export const AiChatbot: React.FC<Props> = ({ isOpen, onClose, onOpen, initialMes
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           stream: true,
-          messages: history.filter((m) => m.id !== 'welcome').slice(-10).map((m) => ({ role: m.role, content: m.content })),
+          messages: history.filter((m) => m.id !== 'welcome').slice(-8).map((m) => ({ role: m.role, content: m.content })),
           siteContext: {
             companyName: settings.companyName, motto: settings.motto, phone: settings.phone, whatsapp: wa, email: settings.email,
             aiName,
-            services: services.map((s) => ({ name: s.name, price: priceLabel(s), delivery: s.deliveryTime, description: s.shortDesc, features: s.features.slice(0, 6) })),
-            portfolio: portfolio.filter((p) => !p.id.startsWith('placeholder')).map((p) => ({ title: p.title, category: p.category, url: p.liveUrl || '' })),
+            visitorName: activeVisitorName,
+            preferredService: visitor.service,
+            timeOfDay: getTimeOfDay(),
+            currentPage: typeof window !== 'undefined' ? window.location.pathname : '/',
+            services: compactServices,
+            portfolio: compactPortfolio,
           },
         }),
       });
@@ -135,7 +217,7 @@ export const AiChatbot: React.FC<Props> = ({ isOpen, onClose, onOpen, initialMes
     } catch {
       if (!addedBubble) {
         setFailed(true);
-        setMessages((p) => [...p, { id: `e-${Date.now()}`, role: 'assistant', timestamp: now(), content: localReply(content) }]);
+        setMessages((p) => [...p, { id: `e-${Date.now()}`, role: 'assistant', timestamp: now(), content: localReply(content, activeVisitorName) }]);
       }
     } finally { setBusy(false); }
   };
@@ -224,7 +306,7 @@ export const AiChatbot: React.FC<Props> = ({ isOpen, onClose, onOpen, initialMes
       </div>
       <form onSubmit={(e) => { e.preventDefault(); void send(); }} className="flex items-center gap-2 border-t border-white/10 bg-navy p-3">
         <label htmlFor="chat-input" className="sr-only">Message {aiName}</label>
-        <input id="chat-input" value={input} onChange={(e) => setInput(e.target.value)} maxLength={1000} placeholder="Ask about services, pricing, quotes…" className="min-w-0 flex-1 rounded-xl border border-white/15 bg-black px-4 py-3 text-sm focus:border-brand focus:outline-none" />
+        <input id="chat-input" value={input} onChange={(e) => setInput(e.target.value)} maxLength={1000} placeholder="Ask me anything—websites, services, pricing…" className="min-w-0 flex-1 rounded-xl border border-white/15 bg-black px-4 py-3 text-sm focus:border-brand focus:outline-none" />
         <a href={waLink(wa)} target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp" className="grid h-11 w-11 place-items-center rounded-xl border border-[#25D366]/50 text-[#25D366] hover:bg-[#25D366] hover:text-black"><MessageCircle size={18} /></a>
         <button type="submit" disabled={busy || !input.trim()} aria-label="Send message" className="grid h-11 w-11 place-items-center rounded-xl bg-brand text-white disabled:opacity-50"><Send size={18} /></button>
       </form>

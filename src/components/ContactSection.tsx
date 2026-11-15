@@ -31,6 +31,10 @@ const ContactForm: React.FC<{ initialService?: string }> = ({ initialService }) 
         name: f.name.trim().slice(0, 80), email: f.email.trim().slice(0, 100), phone: f.phone.trim().slice(0, 30) || 'Not provided',
         service: f.service, budget: '', message: `Business: ${f.business.trim() || '-'}\n\n${f.message.trim()}`.slice(0, 2000),
       })]);
+      try {
+        localStorage.setItem('emg_visitor', JSON.stringify({ name: f.name.trim().split(/\s+/)[0].slice(0, 40), service: f.service.slice(0, 60) }));
+        window.dispatchEvent(new Event('emg-visitor-updated'));
+      } catch { /* ignore storage restrictions */ }
       setStatus('sent'); toast('success', 'Message sent. We will get back to you soon.');
     } catch (x) { setErrMsg((x as Error).message); setStatus('error'); }
   };
