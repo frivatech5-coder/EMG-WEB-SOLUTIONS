@@ -1,0 +1,72 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} { allow read, write: if false; }
+
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.email == 'frivatech5@gmail.com' && request.auth.token.email_verified == true) ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    function str(v, max) { return v is string && v.size() > 0 && v.size() <= max; }
+
+    function isValidNewReview(d) {
+      return d.keys().hasAll(['authorName', 'rating', 'reviewText', 'serviceReviewed', 'status', 'source', 'verifiedGoogleReview']) &&
+        d.keys().size() <= 12 &&
+        str(d.authorName, 80) && (d.rating is int || d.rating is number) && d.rating >= 1 && d.rating <= 5 &&
+        str(d.reviewText, 1500) && str(d.serviceReviewed, 100) &&
+        d.status == 'pending' && d.source == 'customer' && d.verifiedGoogleReview == false;
+    }
+
+    function isValidInquiry(d) {
+      return d.keys().hasAll(['name', 'phone', 'email', 'message']) &&
+        d.keys().size() <= 10 &&
+        str(d.name, 80) && str(d.phone, 30) && str(d.email, 100) && str(d.message, 2000);
+    }
+
+    match /settings/{id} {
+      allow get: if isValidId(id);
+      allow list: if isAdmin();
+      allow write: if isAdmin() && isValidId(id);
+    }
+
+    match /services/{id} {
+      allow get: if isValidId(id);
+      allow list: if true;
+      allow write: if isAdmin() && isValidId(id);
+    }
+
+    match /portfolio/{id} {
+      allow get: if isValidId(id);
+      allow list: if true;
+      allow write: if isAdmin() && isValidId(id);
+    }
+
+    match /reviews/{id} {
+      allow get: if isValidId(id) && (isAdmin() || resource.data.status == 'approved');
+      allow list: if isAdmin() || resource.data.status == 'approved';
+      allow create: if isValidId(id) && isValidNewReview(request.resource.data);
+      allow update, delete: if isAdmin() && isValidId(id);
+    }
+
+    match /inquiries/{id} {
+      allow create: if isValidId(id) && isValidInquiry(request.resource.data);
+      allow get: if isAdmin() && isValidId(id);
+      allow list: if isAdmin();
+      allow update, delete: if isAdmin() && isValidId(id);
+    }
+
+    match /admins/{uid} {
+      allow get: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      allow write: if false;
+    }
+  }
+}

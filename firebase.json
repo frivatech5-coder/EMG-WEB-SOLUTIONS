@@ -1,0 +1,6 @@
+{
+  "firestore": [
+    { "database": "ai-studio-emgwebsolutions-27482385-d79d-488e-8760-5433f45e5f82", "rules": "firestore.rules" }
+  ],
+  "storage": { "rules": "storage.rules" }
+}

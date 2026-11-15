@@ -1,0 +1,320 @@
+{
+  "entities": {
+    "SiteSettings": {
+      "title": "SiteSettings",
+      "description": "Global configuration and customizable UI texts for EMG Web Solutions",
+      "type": "object",
+      "properties": {
+        "companyName": {
+          "type": "string",
+          "description": "Company name",
+          "maxLength": 100
+        },
+        "tagline": {
+          "type": "string",
+          "description": "Brand tagline",
+          "maxLength": 100
+        },
+        "motto": {
+          "type": "string",
+          "description": "Brand motto",
+          "maxLength": 100
+        },
+        "phone": {
+          "type": "string",
+          "description": "Official contact phone number",
+          "maxLength": 30
+        },
+        "email": {
+          "type": "string",
+          "description": "Official contact email address",
+          "maxLength": 100
+        },
+        "address": {
+          "type": "string",
+          "description": "Physical and remote service address",
+          "maxLength": 200
+        },
+        "aiLogo": {
+          "type": "string",
+          "description": "Image path or URL for the AI virtual assistant logo/avatar",
+          "maxLength": 1000
+        },
+        "aiName": {
+          "type": "string",
+          "description": "Name of the AI virtual assistant",
+          "maxLength": 60
+        },
+        "heroTitle": {
+          "type": "string",
+          "description": "Hero section primary headline",
+          "maxLength": 250
+        },
+        "heroSubtitle": {
+          "type": "string",
+          "description": "Hero section secondary description",
+          "maxLength": 500
+        },
+        "heroBadgeText": {
+          "type": "string",
+          "description": "Hero status badge text",
+          "maxLength": 100
+        },
+        "ctaTitle": {
+          "type": "string",
+          "description": "Call to action headline",
+          "maxLength": 200
+        },
+        "ctaSubtitle": {
+          "type": "string",
+          "description": "Call to action subtitle",
+          "maxLength": 400
+        },
+        "announcementText": {
+          "type": "string",
+          "description": "Top ribbon announcement text",
+          "maxLength": 200
+        },
+        "showAnnouncement": {
+          "type": "boolean",
+          "description": "Flag to toggle announcement visibility"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["companyName", "phone", "email", "heroTitle"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "A portfolio case study or project showcase",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Project title",
+          "maxLength": 120
+        },
+        "category": {
+          "type": "string",
+          "description": "Project classification category",
+          "maxLength": 60
+        },
+        "client": {
+          "type": "string",
+          "description": "Client name or brand",
+          "maxLength": 100
+        },
+        "image": {
+          "type": "string",
+          "description": "Preview image URL",
+          "maxLength": 500
+        },
+        "description": {
+          "type": "string",
+          "description": "Short project summary",
+          "maxLength": 1000
+        },
+        "challenge": {
+          "type": "string",
+          "description": "Client business challenge",
+          "maxLength": 1000
+        },
+        "solution": {
+          "type": "string",
+          "description": "EMG technical solution",
+          "maxLength": 1000
+        },
+        "outcome": {
+          "type": "string",
+          "description": "Measurable business results",
+          "maxLength": 1000
+        },
+        "liveUrl": {
+          "type": "string",
+          "description": "Optional live demonstration URL",
+          "maxLength": 500
+        },
+        "featured": {
+          "type": "boolean",
+          "description": "Featured on home page flag"
+        },
+        "year": {
+          "type": "string",
+          "description": "Completion year",
+          "maxLength": 10
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last updated timestamp"
+        }
+      },
+      "required": ["title", "category", "client", "image", "description"]
+    },
+    "Service": {
+      "title": "Service",
+      "description": "Web engineering service offering with deliverables and pricing",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Service name",
+          "maxLength": 100
+        },
+        "shortDesc": {
+          "type": "string",
+          "description": "Concise summary",
+          "maxLength": 300
+        },
+        "fullDesc": {
+          "type": "string",
+          "description": "Detailed description of scope",
+          "maxLength": 1500
+        },
+        "icon": {
+          "type": "string",
+          "description": "Lucide icon identifier",
+          "maxLength": 40
+        },
+        "startingPrice": {
+          "type": "string",
+          "description": "Price indicator",
+          "maxLength": 50
+        },
+        "deliveryTime": {
+          "type": "string",
+          "description": "Standard turnaround timeline",
+          "maxLength": 50
+        },
+        "popular": {
+          "type": "boolean",
+          "description": "Highlighted as popular offering"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last updated timestamp"
+        }
+      },
+      "required": ["name", "shortDesc", "fullDesc", "startingPrice", "deliveryTime"]
+    },
+    "GoogleReview": {
+      "title": "GoogleReview",
+      "description": "Client testimonial or direct Google Maps review",
+      "type": "object",
+      "properties": {
+        "authorName": {
+          "type": "string",
+          "description": "Reviewer full name",
+          "maxLength": 80
+        },
+        "authorRole": {
+          "type": "string",
+          "description": "Optional reviewer title or role",
+          "maxLength": 80
+        },
+        "authorAvatar": {
+          "type": "string",
+          "description": "Avatar image URL",
+          "maxLength": 500
+        },
+        "rating": {
+          "type": "integer",
+          "description": "Star rating between 1 and 5"
+        },
+        "date": {
+          "type": "string",
+          "description": "Submission date string",
+          "maxLength": 50
+        },
+        "reviewText": {
+          "type": "string",
+          "description": "Review feedback content",
+          "maxLength": 1500
+        },
+        "serviceReviewed": {
+          "type": "string",
+          "description": "Service category received",
+          "maxLength": 100
+        },
+        "isLocalGuide": {
+          "type": "boolean",
+          "description": "Google Local Guide status"
+        },
+        "verifiedGoogleReview": {
+          "type": "boolean",
+          "description": "Verified Google Maps review status"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["authorName", "rating", "reviewText", "serviceReviewed"]
+    },
+    "Inquiry": {
+      "title": "Inquiry",
+      "description": "Customer project contact inquiry or quote request",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Prospective client name",
+          "maxLength": 80
+        },
+        "phone": {
+          "type": "string",
+          "description": "Contact phone number",
+          "maxLength": 30
+        },
+        "email": {
+          "type": "string",
+          "description": "Contact email address",
+          "maxLength": 100
+        },
+        "service": {
+          "type": "string",
+          "description": "Service or scope desired",
+          "maxLength": 100
+        },
+        "budget": {
+          "type": "string",
+          "description": "Estimated budget bracket",
+          "maxLength": 60
+        },
+        "message": {
+          "type": "string",
+          "description": "Project brief and requirements",
+          "maxLength": 2000
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp submitted"
+        }
+      },
+      "required": ["name", "phone", "email", "message"]
+    }
+  },
+  "firestore": {
+    "/settings/global": {
+      "schema": "SiteSettings",
+      "description": "Site-wide configuration and customizable UI copy"
+    },
+    "/portfolio/{projectId}": {
+      "schema": "Project",
+      "description": "Individual portfolio project documents"
+    },
+    "/services/{serviceId}": {
+      "schema": "Service",
+      "description": "Individual service offerings"
+    },
+    "/reviews/{reviewId}": {
+      "schema": "GoogleReview",
+      "description": "Client reviews directly linked to Google Maps"
+    },
+    "/inquiries/{inquiryId}": {
+      "schema": "Inquiry",
+      "description": "Client leads and quote inquiries"
+    }
+  }
+}
