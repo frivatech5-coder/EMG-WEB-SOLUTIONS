@@ -6,10 +6,12 @@ import { Reveal, SectionTitle } from './Reveal';
 import { ACCENTS } from '../data/accents';
 import { isHttpUrl } from '../lib/format';
 
+import { navigate } from '../lib/router';
+
 const isLiveUrl = (u?: string) => isHttpUrl(u) && !/example\.com/i.test(u || '');
 const previewSrc = (p: Project) => p.image?.trim() || (isLiveUrl(p.liveUrl) ? `https://image.thum.io/get/width/1200/crop/760/${p.liveUrl}` : '');
 
-const ProjectCard: React.FC<{ p: Project; color: string; delay: number }> = ({ p, color, delay }) => {
+export const ProjectCard: React.FC<{ p: Project; color: string; delay: number }> = ({ p, color, delay }) => {
   const [failed, setFailed] = useState(false);
   const src = previewSrc(p);
   useEffect(() => {
@@ -61,7 +63,8 @@ const ProjectCard: React.FC<{ p: Project; color: string; delay: number }> = ({ p
 export const PortfolioSection: React.FC = () => {
   const { portfolio, settings, isLoading } = useSite();
   const finished = portfolio.filter((p) => !p.id.startsWith('placeholder'));
-  const items = [...(finished.length ? finished : portfolio)].sort((a, b) => Number(b.featured) - Number(a.featured));
+  const allItems = [...(finished.length ? finished : portfolio)].sort((a, b) => Number(b.featured) - Number(a.featured));
+  const items = allItems.slice(0, 2);
   return (
     <section id="work" className="border-t border-white/10 px-5 py-24 sm:px-8 lg:py-32">
       <div className="mx-auto max-w-7xl">
@@ -69,6 +72,18 @@ export const PortfolioSection: React.FC = () => {
         <div className="grid gap-x-8 gap-y-16 md:grid-cols-2">
           {items.length === 0 && isLoading && [0, 1].map((i) => <div key={i} className="skeleton aspect-[16/11] rounded-2xl" aria-hidden="true" />)}
           {items.map((p, i) => <ProjectCard key={p.id} p={p} color={ACCENTS[(i * 2) % ACCENTS.length]} delay={(i % 2) * 0.1} />)}
+        </div>
+        <div className="mt-14 flex justify-center">
+          <a
+            href="/projects"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate('/projects');
+            }}
+            className="group inline-flex min-h-12 items-center gap-2.5 rounded-full border border-white/20 bg-navy px-8 py-3.5 text-sm font-bold uppercase tracking-wider text-white transition-all hover:border-brand hover:bg-brand hover:shadow-[0_0_32px_-6px_#147FF5]"
+          >
+            View more <ArrowUpRight size={18} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+          </a>
         </div>
       </div>
     </section>

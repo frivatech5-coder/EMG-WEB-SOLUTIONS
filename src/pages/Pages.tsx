@@ -1,7 +1,9 @@
-import React, { useEffect } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ArrowLeft, ArrowUpRight } from 'lucide-react';
 import { useSite } from '../context/SiteContext';
 import { navigate } from '../lib/router';
+import { ProjectCard } from '../components/PortfolioSection';
+import { ACCENTS } from '../data/accents';
 
 const Shell: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => {
   const { settings } = useSite();
@@ -11,6 +13,68 @@ const Shell: React.FC<{ title: string; children: React.ReactNode }> = ({ title, 
       <a href="/" onClick={(e) => { e.preventDefault(); navigate('/'); }} className="mb-10 inline-flex items-center gap-2 text-sm text-muted hover:text-white"><ArrowLeft size={16} /> Back to website</a>
       <h1 className="font-display text-4xl font-bold sm:text-5xl">{title}</h1>
       <div className="mt-10 space-y-8 leading-relaxed text-white/85 [&_h2]:mb-3 [&_h2]:font-display [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:text-white [&_a]:text-brand [&_a]:underline [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-6">{children}</div>
+    </main>
+  );
+};
+
+export const ProjectsPage: React.FC<{ onStartProject: () => void }> = ({ onStartProject }) => {
+  const { portfolio, settings, isLoading } = useSite();
+  const [category, setCategory] = useState('All');
+
+  useEffect(() => {
+    document.title = `Projects | ${settings.companyName}`;
+  }, [settings.companyName]);
+
+  const finished = portfolio.filter((p) => !p.id.startsWith('placeholder'));
+  const allItems = [...(finished.length ? finished : portfolio)].sort((a, b) => Number(b.featured) - Number(a.featured));
+  const categories = ['All', ...Array.from(new Set(allItems.map((p) => p.category).filter(Boolean)))];
+  const visible = category === 'All' ? allItems : allItems.filter((p) => p.category === category);
+
+  return (
+    <main className="mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-24">
+      <a href="/" onClick={(e) => { e.preventDefault(); navigate('/'); }} className="mb-10 inline-flex items-center gap-2 text-sm text-muted hover:text-white">
+        <ArrowLeft size={16} /> Back to website
+      </a>
+      <div className="flex flex-col justify-between gap-6 border-b border-white/10 pb-10 md:flex-row md:items-end">
+        <div className="max-w-2xl">
+          <p className="font-mono text-xs uppercase tracking-widest text-brand">Portfolio</p>
+          <h1 className="mt-3 font-display text-4xl font-bold sm:text-5xl lg:text-6xl">{settings.portfolioTitle}</h1>
+          {settings.portfolioIntro && <p className="mt-4 text-lg text-muted">{settings.portfolioIntro}</p>}
+        </div>
+        <button
+          onClick={onStartProject}
+          className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-brand px-7 py-3.5 text-sm font-bold text-white transition-shadow hover:shadow-[0_0_32px_-6px_#147FF5]"
+        >
+          START A PROJECT <ArrowUpRight size={18} />
+        </button>
+      </div>
+
+      {categories.length > 2 && (
+        <div className="mt-8 flex flex-wrap gap-2" role="tablist" aria-label="Filter projects by category">
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              role="tab"
+              aria-selected={category === cat}
+              onClick={() => setCategory(cat)}
+              className={`rounded-full border px-4 py-2 text-xs font-semibold transition-colors ${category === cat ? 'border-brand bg-brand text-white' : 'border-white/15 bg-navy text-muted hover:border-white/30 hover:text-white'}`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-12 grid gap-x-8 gap-y-16 md:grid-cols-2">
+        {visible.length === 0 && isLoading && [0, 1, 2, 3].map((i) => <div key={i} className="skeleton aspect-[16/11] rounded-2xl" aria-hidden="true" />)}
+        {visible.map((p, i) => (
+          <ProjectCard key={p.id} p={p} color={ACCENTS[(i * 2) % ACCENTS.length]} delay={(i % 2) * 0.08} />
+        ))}
+      </div>
+
+      {!isLoading && visible.length === 0 && (
+        <p className="py-16 text-center text-muted">No projects found in this category yet.</p>
+      )}
     </main>
   );
 };

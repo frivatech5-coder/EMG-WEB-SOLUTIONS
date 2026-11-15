@@ -15,7 +15,7 @@ import { Footer } from './components/Footer';
 import { AnnouncementBar } from './components/AnnouncementBar';
 import { WhatsAppFab } from './components/WhatsAppFab';
 import { Toaster } from './components/Toaster';
-import { PrivacyPage, TermsPage, NotFoundPage } from './pages/Pages';
+import { PrivacyPage, TermsPage, ProjectsPage, NotFoundPage } from './pages/Pages';
 import { usePath } from './lib/router';
 import { socialLinks } from './data/links';
 
@@ -85,6 +85,10 @@ function MainApp() {
           <Testimonials />
           <ContactSection />
         </main>
+      ) : path === '/projects' ? (
+        <div id="main" className="flex-1">
+          <ProjectsPage onStartProject={() => openContact()} />
+        </div>
       ) : path === '/privacy' ? (
         <div id="main" className="flex-1">
           <PrivacyPage />
